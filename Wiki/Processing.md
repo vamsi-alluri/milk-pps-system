@@ -4,14 +4,14 @@ There's a ton of operations a processing plant could do apart from just processi
 Capabilities of a processing plant (might vary depending on the location):
 1.	Pasteurizing,
 2.	homogenizing,
-3.	Cream Extraction or Fat/SNF removal
-4.	Cream Combiner or Fat/SNF mixer
-5.	Milk condenser
+3.	Cream Extraction or Fat/SNF removal,
+4.	Cream Combiner or Fat/SNF mixer,
+5.	Milk condenser,
 6.	Using the extracted cream, 
-7.	to create butter - salted/unsalted
-8.	using butter to create ghee/clarified butter
-9.	sweets using butter and milk
-10.	Extracting skim milk 
+7.	to create butter - salted/unsalted,
+8.	using butter to create ghee/clarified butter,
+9.	sweets using butter and milk,
+10.	Extracting skim milk,
 11. And so on, we can add later.
 
 
