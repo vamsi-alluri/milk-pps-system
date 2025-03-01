@@ -75,7 +75,7 @@ CREATE TABLE MilkSuppliers (
 
 -- The route which a vehicle has to go around collecting or distributing the products.
 CREATE TABLE Route (
-    RouteID INT AUTO_INCREMENT PRIMARY KEY,     -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella-route_number
+    RouteID INT AUTO_INCREMENT PRIMARY KEY,     -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella--route_number
 
 );
 
@@ -147,9 +147,9 @@ CREATE TABLE Batches (
     BatchName VARCHAR(200),
     MilkType VARCHAR(100) NOT NULL,
     FatPercentage DECIMAL(5,2),
-    SNFPercentage DECIMAL(5,2),
-    SMP, -- Skim Milk Powder.
-    MilkMixturePercentages,
+    SNFPercentage DECIMAL(5,2),             -- Solids Non Fat
+    SMPPercentage DECIMAL(5,2),             -- Skim Milk Powder.
+    MilkMixtureComposition INT NOT NULL,    -- TODO: Figure out a way to track the milk mixture composition without just inputing it.
     CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     StatusID INT NOT NULL,
     FOREIGN KEY (PlantID) REFERENCES ProcessingPlants(PlantID),
