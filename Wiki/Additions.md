@@ -1,0 +1,2 @@
+- Auto Recording from IoTs
+- Photos for validating - data attestation.
