@@ -40,6 +40,7 @@ CREATE TABLE BatchStatuses (
     StatusName VARCHAR(50) UNIQUE NOT NULL
 );
 
+-- Duration Types is for profitability reports. WIP, don't use yet.
 CREATE TABLE DurationTypes (
     DurationID INT AUTO_INCREMENT PRIMARY KEY,
     DurationName VARCHAR(50) UNIQUE NOT NULL
@@ -52,6 +53,18 @@ CREATE TABLE MilkTypes (
     BuffaloOrCow VARCHAR(2) NOT NULL
 );
 
+CREATE TABLE PowerFuelTypes (
+    PowerFuelTypeID INT AUTO_INCREMENT PRIMARY KEY,
+    PowerFuelTypeName VARCHAR(255), -- ENUM('Electricity', 'Steam', 'Diesel'), to be used in processing plants.
+    Cost DECIMAL(10,2)
+);
+
+CREATE TABLE PackingMaterials (
+    PackingMaterialID INT AUTO_INCREMENT PRIMARY KEY,
+    PackingMaterialName VARCHAR(255),
+    Cost DECIMAL(10,2),
+    PurposeOfPackingMaterial VARCHAR(200)
+);
 
 -- Inventory Management
 CREATE TABLE Silos(
@@ -70,13 +83,19 @@ CREATE TABLE MilkSuppliers (
     Name VARCHAR(255) NOT NULL,
     Location VARCHAR(255),
     Address TEXT,           -- TBD on formatting - or further split with Street Address, City, State for filtering.
-    MilkTypesAvailable TEXT -- JSON format: [{"MilkType": "Cow", "Cost": 50}, {"MilkType": "Buffalo", "Cost": 60}]
+    MilkTypesAvailable JSON, -- JSON format: [{"MilkType": "Cow", "Cost": 50}, {"MilkType": "Buffalo", "Cost": 60}]
+    OnRoute INT,
+    FOREIGN KEY (OnRoute) REFERENCES Routes(RouteID)
 );
 
--- The route which a vehicle has to go around collecting or distributing the products.
-CREATE TABLE Route (
-    RouteID INT AUTO_INCREMENT PRIMARY KEY,     -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella--route_number
-
+-- Routes
+--      The route which a vehicle has to go around collecting or distributing the products.
+CREATE TABLE Routes (
+    RouteID INT AUTO_INCREMENT PRIMARY KEY,
+    RouteCode VARCHAR(100) NOT NULL UNIQUE,          -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella-agent_number-route_number
+    RouteName VARCHAR(200) NOT NULL,
+    AssociatedProcessingPlant INT,
+    FOREIGN KEY (AssociatedProcessingPlant) REFERENCES ProcessingPlants(ProcessingPlantID)
 );
 
 -- Chilling Centers
@@ -86,7 +105,9 @@ CREATE TABLE ChillingCenters (
     Location VARCHAR(255),
     Address TEXT,
     Capabilities TEXT, -- JSON format for future extensibility
-    Cost
+    Cost DECIMAL(10,2),
+    OnRoute INT,
+    FOREIGN KEY (OnRoute) REFERENCES Routes(RouteID)
 );
 
 -- Transport Vehicles
@@ -98,20 +119,24 @@ CREATE TABLE TransportVehicles (
     Source VARCHAR(255),
     Destination VARCHAR(255),
     LastLocation VARCHAR(255),
+    CarryingCapacity DECIMAL(10,2),
+    VehicleCapacity DECIMAL(10,2),
+    Cost DECIMAL(10,2),
+    DriverID INT,   -- Who's driving.
+    RouteID INT, -- Which route it is on.
+    FOREIGN KEY (DriverID) REFERENCES Drivers(DriverID),
+    FOREIGN KEY (RouteID) REFERENCES Routes(RouteID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(TypeID),
     FOREIGN KEY (GoodsID) REFERENCES GoodsTypes(GoodsID),
-    CarryingCapacity,
-    VehicleCapacity,
-    Cost
 );
 
-CREATE TABLE Driver(
-    DriverId,
-    DriverName,
-    DriverPhoneNumber,
-    DriverLicenseNumber,
-    DriverLicenseValidUpTo,
-    DriverBadgeNumber
+CREATE TABLE Drivers (
+    DriverID INT AUTO_INCREMENT PRIMARY KEY,
+    DriverName VARCHAR(255) NOT NULL,
+    DriverPhoneNumber VARCHAR(20),
+    DriverLicenseNumber VARCHAR(50) UNIQUE,
+    DriverLicenseValidUpTo DATE,
+    DriverBadgeNumber VARCHAR(50) UNIQUE
 );
 
 -- Processing Plants
@@ -121,7 +146,7 @@ CREATE TABLE ProcessingPlants (
     Location VARCHAR(255),
     Address TEXT,
     Capabilities TEXT, -- JSON format to store processing capabilities
-    Cost
+    Cost DECIMAL(10,2)
 );
 
 -- Inventory Tracking
@@ -152,9 +177,11 @@ CREATE TABLE Batches (
     MilkMixtureComposition INT NOT NULL,    -- TODO: Figure out a way to track the milk mixture composition without just inputing it.
     CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     StatusID INT NOT NULL,
+    ForRoute NULL INT,                      -- Optional - can be null, doesn't have to be for a route.
     FOREIGN KEY (PlantID) REFERENCES ProcessingPlants(PlantID),
     FOREIGN KEY (StatusID) REFERENCES BatchStatuses(StatusID),
-    FOREIGN KEY (SiloID) REFERENCES Silos(SiloID)
+    FOREIGN KEY (SiloID) REFERENCES Silos(SiloID),
+    FOREIGN KEY (ForRoute) REFERENCES Routes(RouteID)
 );
 
 -- Batch Status Tracking
@@ -171,10 +198,10 @@ CREATE TABLE BatchStatusTracking (
 CREATE TABLE CorrectionBatches (
     CorrectionBatchID INT AUTO_INCREMENT PRIMARY KEY,
     BatchID INT,
-    Reason TEXT,
+    Reason TEXT,            -- Why did it need the correction. Need more meaningful name.
     CorrectionTime DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (BatchID) REFERENCES Batches(BatchID),
-    Correction
+    Correction              -- What correction has been made. Need more meaningful name.
 );
 
 -- Procurement Cost Tracking
@@ -202,21 +229,44 @@ CREATE TABLE ProfitabilityReports (
     FOREIGN KEY (DurationID) REFERENCES DurationTypes(DurationID)
 );
 
-CREATE TABLE QualityTracking(
-    
+CREATE TABLE MilkMixtureComposition (
+    CompositionID INT AUTO_INCREMENT PRIMARY KEY,
+    BatchID INT,
+    MilkType VARCHAR(100),
+    Percentage DECIMAL(5,2),
+    FOREIGN KEY (BatchID) REFERENCES Batches(BatchID)
 );
 
--- TODO:
+CREATE TABLE QualityControl (
+    QualityID INT AUTO_INCREMENT PRIMARY KEY,
+    BatchID INT,
+    FatPercentage DECIMAL(5,2),
+    SNFPercentage DECIMAL(5,2),
+    AlcoholPercentage DECIMAL(5,2),
+    LactometerReading DECIMAL(5,2),
+    MBRT DECIMAL(5,2),
+    HeatStability DECIMAL(5,2),
+    ClotOnBoiling BOOLEAN,
+    AdulterationTests JSON,
+    ProtienPercentage DECIMAL(5,2),
+    FOREIGN KEY (BatchID) REFERENCES Batches(BatchID)
+);
 
--- Power and fuel subtopics: electricity(government power and solar), steam(timber, brickets, coal and others), diesel.
+CREATE TABLE TemperatureTracking (
+    TempID INT AUTO_INCREMENT PRIMARY KEY,
+    BatchID INT,
+    Stage VARCHAR(255),
+    Temperature DECIMAL(5,2),
+    FOREIGN KEY (BatchID) REFERENCES Batches(BatchID)
+);
 
--- PackingMaterial:
--- Film (milk, curd, ghee, paneer), buckets(10kg, 5kg, 1kg), cups
+CREATE TABLE CurdBatches (                          -- TODO: Think how to incorporate this into the generic Batches.
+    CurdBatchID INT AUTO_INCREMENT PRIMARY KEY,
+    BatchID INT,
+    CurdType VARCHAR(255),
+    Quantity DECIMAL(10,2),
+    FOREIGN KEY (BatchID) REFERENCES Batches(BatchID)
+);
 
--- Quality Control: fat%, snf%, alcohol% [acceptable 68 - 70 range] -> Shelf Life, 
--- Lactometer Reading -> SNF, MBRT(Methane Blue Reduction Test) [acceptable raw: atleast 1 hr or above; processed: atleast 5hrs], HS(Heat Stability) [accepted 6 and above], COB (Clot on Boiling), Acidity[acceptable .126 to .140], Protein[CM: min 3.4%, BM: min 3.55%], 
--- Adultretion Test -> Ranges should be negative: Urea, Sugar(sucrose, maltose), Salt, Pesticide, Antibiotic, Malamine, Starch. PT Test[atleast 2hrs]
--- Temperatures - raw milk, pasteurization, packing.
--- Curd Batches,
 
 
