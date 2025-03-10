@@ -1,0 +1,6 @@
+﻿CREATE TABLE MilkTypes (
+    MilkID INT IDENTITY(1,1) PRIMARY KEY,
+    MilkName VARCHAR(50) UNIQUE NOT NULL,
+    CostPerLitre DECIMAL(5,2) NOT NULL,
+    BuffaloOrCow VARCHAR(2) NOT NULL
+);

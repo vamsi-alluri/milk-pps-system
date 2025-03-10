@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35825.156 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pps-api", "pps-api.csproj", "{2CBCCD57-82BF-4114-9A1B-9DD6D51FA6F6}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "pps-data-mssql", "..\pps-data-mssql\pps-data-mssql.sqlproj", "{7C73FBA4-1553-4993-B797-A925DAD4F0E6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pps-models-lib", "..\pps-models-lib\pps-models-lib.csproj", "{21791017-B84E-4625-BEBC-12D8002AF6BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2CBCCD57-82BF-4114-9A1B-9DD6D51FA6F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CBCCD57-82BF-4114-9A1B-9DD6D51FA6F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CBCCD57-82BF-4114-9A1B-9DD6D51FA6F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CBCCD57-82BF-4114-9A1B-9DD6D51FA6F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C73FBA4-1553-4993-B797-A925DAD4F0E6}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{21791017-B84E-4625-BEBC-12D8002AF6BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21791017-B84E-4625-BEBC-12D8002AF6BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21791017-B84E-4625-BEBC-12D8002AF6BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21791017-B84E-4625-BEBC-12D8002AF6BD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FC8C492B-DA47-4503-A37D-A2A9D032CEB4}
+	EndGlobalSection
+EndGlobal

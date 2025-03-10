@@ -1,0 +1,4 @@
+﻿CREATE TABLE BatchStatuses (
+    StatusID INT IDENTITY(1,1) PRIMARY KEY,
+    StatusName VARCHAR(50) UNIQUE NOT NULL
+);

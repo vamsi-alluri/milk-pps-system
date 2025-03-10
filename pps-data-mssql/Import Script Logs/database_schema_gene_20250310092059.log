@@ -1,0 +1,13 @@
+3/10/2025 5:20:59 PM	This log contains information about the import operation of the script 'database_schema_generation_mssql.sql' into project 'pps-data-mssql' on computer 'ZEPHRUS_G16' by user'vamsi.
+3/10/2025 5:21:00 PM	Started importing file: C:\Users\vamsi\Documents\My Projects\milk-pps-system\DatabaseSchema\database_schema_generation_mssql.sql 
+3/10/2025 5:21:00 PM	File name C:\Users\vamsi\Documents\My Projects\milk-pps-system\DatabaseSchema\database_schema_generation_mssql.sql (size: 9566)
+3/10/2025 5:21:00 PM	Parsing import script
+3/10/2025 5:21:00 PM	Total number of batches in script: 1
+3/10/2025 5:21:00 PM	Total number of statements in script: 24
+3/10/2025 5:21:00 PM	The script was successfully imported into the project.
+3/10/2025 5:21:00 PM	Analyzing schema objects...
+3/10/2025 5:21:00 PM	Scanning project for duplicate elements
+3/10/2025 5:21:00 PM	Finished duplicate element processing
+3/10/2025 5:21:00 PM	In the script that you provided to the import operation, one or more statements were not fully understood. These statements were moved to the ScriptsIgnoredOnImport.sql file. Review the file contents for additional information.
+3/10/2025 5:21:00 PM	A summary of the import was saved to the following location: C:\Users\vamsi\Documents\My Projects\milk-pps-system\pps-data-mssql\Import Script Logs\database_schema_gene_20250310092059.log
+3/10/2025 5:21:00 PM	Click Finish to continue...
