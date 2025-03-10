@@ -1,5 +1,5 @@
-CREATE DATABASE MilkProcurementProcessingAndSales;
-USE MilkProcurementProcessingAndSales;
+-- CREATE DATABASE PPS;
+USE PPS;
 
 -- Drop existing tables if they exist (use with caution)
 DROP TABLE IF EXISTS ProfitabilityReports;
@@ -23,6 +23,16 @@ DROP TABLE IF EXISTS MilkTypes;
 DROP TABLE IF EXISTS Silos;
 
 
+
+-- Processing Plants
+CREATE TABLE ProcessingPlants (
+    PlantID INT IDENTITY(1,1) PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL,
+    Location VARCHAR(255),
+    Address TEXT,
+    Capabilities NVARCHAR(MAX), -- JSON
+    Cost DECIMAL(10,2)
+);
 
 -- Enum Tables
 CREATE TABLE VehicleTypes (
@@ -76,6 +86,16 @@ CREATE TABLE Silos(
     FOREIGN KEY (ProcessingPlantID) REFERENCES ProcessingPlants(PlantID)
 );
 
+-- Routes
+--      The route which a vehicle has to go around collecting or distributing the products.
+CREATE TABLE Routes_ (
+    RouteID INT IDENTITY(1,1) PRIMARY KEY,
+    RouteCode VARCHAR(100) NOT NULL UNIQUE, -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella-agent_number-route_number
+    RouteName VARCHAR(200) NOT NULL,
+    AssociatedProcessingPlant INT,
+    FOREIGN KEY (AssociatedProcessingPlant) REFERENCES ProcessingPlants(PlantID)
+);
+
 -- Physical Locations or persons
 
 CREATE TABLE MilkSuppliers (
@@ -85,17 +105,7 @@ CREATE TABLE MilkSuppliers (
     Address TEXT,           -- TBD on formatting - or further split with Street Address, City, State for filtering.
     MilkTypesAvailable NVARCHAR(MAX), -- JSON format: [{"MilkType": "Cow", "Cost": 50}, {"MilkType": "Buffalo", "Cost": 60}]
     OnRoute INT,
-    FOREIGN KEY (OnRoute) REFERENCES Routes(RouteID)
-);
-
--- Routes
---      The route which a vehicle has to go around collecting or distributing the products.
-CREATE TABLE Routes (
-    RouteID INT IDENTITY(1,1) PRIMARY KEY,
-    RouteCode VARCHAR(100) NOT NULL UNIQUE, -- Based on village code, SDN-CHV-AG##-### -> Shadnagar-chevella-agent_number-route_number
-    RouteName VARCHAR(200) NOT NULL,
-    AssociatedProcessingPlant INT,
-    FOREIGN KEY (AssociatedProcessingPlant) REFERENCES ProcessingPlants(PlantID)
+    FOREIGN KEY (OnRoute) REFERENCES Routes_(RouteID)
 );
 
 -- Chilling Centers
@@ -107,7 +117,16 @@ CREATE TABLE ChillingCenters (
     Capabilities NVARCHAR(MAX), -- JSON
     Cost DECIMAL(10,2),
     OnRoute INT,
-    FOREIGN KEY (OnRoute) REFERENCES Routes(RouteID)
+    FOREIGN KEY (OnRoute) REFERENCES Routes_(RouteID)
+);
+
+CREATE TABLE Drivers (
+    DriverID INT IDENTITY(1,1) PRIMARY KEY,
+    DriverName VARCHAR(255) NOT NULL,
+    DriverPhoneNumber VARCHAR(20),
+    DriverLicenseNumber VARCHAR(50) UNIQUE,
+    DriverLicenseValidUpTo DATE,
+    DriverBadgeNumber VARCHAR(50) UNIQUE
 );
 
 -- Transport Vehicles
@@ -125,28 +144,9 @@ CREATE TABLE TransportVehicles (
     DriverID INT,   -- Who's driving.
     RouteID INT, -- Which route it is on.
     FOREIGN KEY (DriverID) REFERENCES Drivers(DriverID),
-    FOREIGN KEY (RouteID) REFERENCES Routes(RouteID),
+    FOREIGN KEY (RouteID) REFERENCES Routes_(RouteID),
     FOREIGN KEY (VehicleTypeID) REFERENCES VehicleTypes(TypeID),
     FOREIGN KEY (GoodsID) REFERENCES GoodsTypes(GoodsID)
-);
-
-CREATE TABLE Drivers (
-    DriverID INT IDENTITY(1,1) PRIMARY KEY,
-    DriverName VARCHAR(255) NOT NULL,
-    DriverPhoneNumber VARCHAR(20),
-    DriverLicenseNumber VARCHAR(50) UNIQUE,
-    DriverLicenseValidUpTo DATE,
-    DriverBadgeNumber VARCHAR(50) UNIQUE
-);
-
--- Processing Plants
-CREATE TABLE ProcessingPlants (
-    PlantID INT IDENTITY(1,1) PRIMARY KEY,
-    Name VARCHAR(255) NOT NULL,
-    Location VARCHAR(255),
-    Address TEXT,
-    Capabilities NVARCHAR(MAX), -- JSON
-    Cost DECIMAL(10,2)
 );
 
 -- Inventory Tracking
@@ -160,8 +160,8 @@ CREATE TABLE Inventory (
     Quantity_Litres INT,
     Quantity_Kg INT,
     LastUpdated DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (ProcessingPlantID) REFERENCES ProcessingPlants(PlantID)
-    FOREIGN KEY (MilkType) REFERENCES MilkTypes(MilkID)
+    FOREIGN KEY (ProcessingPlantID) REFERENCES ProcessingPlants(PlantID),
+    FOREIGN KEY (MilkTypeID) REFERENCES MilkTypes(MilkID)
 );
 
 -- Batch Processing
@@ -181,7 +181,7 @@ CREATE TABLE Batches (
     FOREIGN KEY (PlantID) REFERENCES ProcessingPlants(PlantID),
     FOREIGN KEY (StatusID) REFERENCES BatchStatuses(StatusID),
     FOREIGN KEY (SiloID) REFERENCES Silos(SiloID),
-    FOREIGN KEY (ForRoute) REFERENCES Routes(RouteID)
+    FOREIGN KEY (ForRoute) REFERENCES Routes_(RouteID)
 );
 
 -- Batch Status Tracking
@@ -201,7 +201,7 @@ CREATE TABLE CorrectionBatches (
     Reason TEXT,            -- Why did it need the correction. Need more meaningful name.
     CorrectionTime DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (BatchID) REFERENCES Batches(BatchID),
-    Correction              -- What correction has been made. Need more meaningful name.
+    Correction VARCHAR(200)              -- What correction has been made. Need more meaningful name.
 );
 
 -- Procurement Cost Tracking
@@ -246,7 +246,7 @@ CREATE TABLE QualityControl (
     LactometerReading DECIMAL(5,2),
     MBRT DECIMAL(5,2),
     HeatStability DECIMAL(5,2),
-    ClotOnBoiling BOOLEAN,
+    ClotOnBoiling BIT,
     AdulterationTests NVARCHAR(MAX), -- As JSON
     ProtienPercentage DECIMAL(5,2),
     FOREIGN KEY (BatchID) REFERENCES Batches(BatchID)

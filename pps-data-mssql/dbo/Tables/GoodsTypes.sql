@@ -1,0 +1,4 @@
+﻿CREATE TABLE GoodsTypes (
+    GoodsID INT IDENTITY(1,1) PRIMARY KEY,
+    GoodsName VARCHAR(50) UNIQUE NOT NULL
+);
