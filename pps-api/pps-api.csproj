@@ -20,8 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <Folder Include="DbContext\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\pps-models-lib\pps-models-lib.csproj" />
   </ItemGroup>
 
 </Project>
