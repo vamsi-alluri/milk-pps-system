@@ -409,3 +409,5 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 /pps-data-mssql/pps-data-mssql.dbmdl
+/pps-data-mssql/pps-data-mssql.jfm
+/pps-data-mssql/pps-data-mssql.jfm
