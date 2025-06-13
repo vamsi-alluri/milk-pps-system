@@ -84,7 +84,6 @@
     <Build Include="dbo\Tables\TemperatureTracking.sql" />
     <Build Include="dbo\Tables\CurdBatches.sql" />
     <None Include="Scripts\ScriptsIgnoredOnImport.sql" />
-    <Build Include="Table1.sql" />
     <Build Include="dbo\Tables\Identity.sql" />
   </ItemGroup>
 </Project>
