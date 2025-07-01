@@ -1,5 +1,4 @@
-﻿using pps_models_lib;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace pps_api.Models
 {
@@ -8,10 +7,10 @@ namespace pps_api.Models
         [JsonPropertyName("rememberMe")]
         public bool RememberMe { get; set; }
 
-        [JsonPropertyName("jwt")]
+        [JsonIgnore]
         public string? Jwt { get; set; }
 
         [JsonPropertyName("credentials")]
-        public Credentials creds { get; set; }
+        public Credentials? Creds { get; set; }
     }
 }

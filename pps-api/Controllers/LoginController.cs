@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Cors;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using pps_api.Managers;
 using pps_api.Models;
-using pps_models_lib;
 using pps_api.Services;
-using System.Text.Json;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace pps_api.Controllers
 {
@@ -15,73 +15,114 @@ namespace pps_api.Controllers
     [ApiController]
     public class LoginController : ControllerBase
     {
-        // GET: api/<ValuesController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+
+        private readonly ILoginManager Manager;
+        private readonly ITokenBlacklistService TokenBlacklistService;
+
+        public LoginController(ILoginManager manager, ITokenBlacklistService tokenBlacklistService)
         {
-            return new string[] { "value1", "value2" };
-        }
-
-        [HttpGet("usepaa")]
-        public string Get(string username, string passwordMask)
-        {
-            Console.WriteLine("Login: Get");
-            // Until the project is connected to a database, we will use hardcoded credentials for demonstration purposes.
-            if (username == "admin" && passwordMask == "admin1234")
-            {
-                return "Login successful!";
-            }
-            else
-            {
-                Credentials creds = new Credentials
-                {
-                    username = username,
-                    password = passwordMask
-
-                };
-                var json_creds = JsonSerializer.Serialize<Credentials>(creds);
-
-                return json_creds;
-            }
+            Manager = manager;
+            TokenBlacklistService = tokenBlacklistService;
         }
 
         // POST api/login
-        [HttpPost("usepaa")]
+        [HttpPost]
         public IActionResult Post([FromBody] LoginRequest login_request)
         {
-            Console.WriteLine("Login: Post");
-
-            //Credentials creds = System.Text.Json.JsonSerializer.Deserialize<Credentials>(value);
-            
-            if (LoginManager.AuthenticateUser(login_request.creds))
+            try
             {
-                var access_or_refresh_token = LoginManager.HandleTokenization(login_request);
-
-                Response.Cookies.Append("refreshToken", access_or_refresh_token, new CookieOptions
+                if (Manager.AuthenticateUser(login_request, out string? token_str, out DateTime expirationDate) && token_str != null)
                 {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddDays(login_request.RememberMe ? 30 : 1)
-                });
+                    if (login_request.Jwt != null)
+                    {
+                        return Ok(); // If it is a JWT login, just return OK.
+                    }
+                    else
+                    {
+                        HttpContext.Response.Cookies.Append("jwt", token_str, new CookieOptions
+                        {
+                            HttpOnly = true,
+                            Secure = true,
+                            SameSite = SameSiteMode.Strict,
+                            Expires = expirationDate
+                        });
 
-                return Ok(new { LoginManager.HandleTokenization() });
+                        return Ok();
+                    }
+                }
             }
-
+            catch (Exception ex)
+            {
+                // Log the exception (ex) as needed
+                return BadRequest(new { message = ex.Message });
+            }
 
             return Unauthorized();
         }
 
-        // PUT api/<ValuesController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        [Authorize]
+        [HttpGet("userinfo")]
+        public IActionResult GetUserInfo()
         {
+            var roles = User.Claims
+                .Where(c => c.Type == ClaimTypes.Role)
+                .Select(c => c.Value);
+            var username = User.Claims
+                .Where(c => c.Type == JwtRegisteredClaimNames.Name)
+                .Select(c => c.Value);
+
+            return Ok(new
+            {
+                username,
+                roles
+            });
         }
 
-        // DELETE api/<ValuesController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        // This endpoint is for listing all logins, if needed.
+#if DEBUG
+        [HttpGet]
+        public IActionResult ListLogins()
         {
+            return Ok(Manager.ListLogins());
+        }
+#endif
+
+        // Think of this as a logout endpoint.
+        [HttpDelete]
+        public IActionResult Delete(LoginRequest loginRequest)
+        {
+            var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            var exp = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+
+            if (jti != null && long.TryParse(exp, out var expUnix))
+            {
+                var expTime = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                TokenBlacklistService.RevokeToken(jti, expTime);
+            }
+
+            return Ok(new { message = "Logged out successfully." });
+
+
+            //try
+            //{
+            //    var jwt = Request.Headers.Authorization.ToString();
+            //    if (!jwt.IsNullOrEmpty() && jwt.StartsWith("Bearer "))
+            //    {
+            //        loginRequest.Jwt = jwt.Substring("Bearer ".Length).Trim();
+            //    }
+            //    Response.Cookies.Delete("refreshToken", new CookieOptions
+            //    {
+            //        HttpOnly = true,
+            //        Secure = true,
+            //        SameSite = SameSiteMode.Strict
+            //    });
+            //    return Ok(Manager.DeleteUserSession(loginRequest));
+            //}
+            //catch (Exception ex)
+            //{
+            //    // Log the exception (ex) as needed
+            //    return BadRequest(new {message = ex.Message });
+            //}
         }
     }
 }
