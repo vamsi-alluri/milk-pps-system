@@ -57,6 +57,7 @@
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="Scripts\" />
+    <Folder Include="dbo\Users" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\ProcessingPlants.sql" />
@@ -85,5 +86,8 @@
     <Build Include="dbo\Tables\CurdBatches.sql" />
     <None Include="Scripts\ScriptsIgnoredOnImport.sql" />
     <Build Include="dbo\Tables\Identity.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dbo\Users\Add_pps_api_user.sql" />
   </ItemGroup>
 </Project>

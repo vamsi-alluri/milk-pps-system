@@ -1,5 +1,10 @@
-
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using pps_api.Managers;
 using pps_api.Services;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 
 namespace pps_api
 {
@@ -10,31 +15,95 @@ namespace pps_api
             var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
+            // Add CORS policy
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy(name: MyAllowSpecificOrigins,
-                                  policy =>
-                                  {
-                                      policy.WithOrigins("http://localhost:3000",
-                                                          "localhost:3000")
-                                                            .AllowAnyHeader()
-                                                            .AllowAnyMethod();
-                                  });
-            }); 
+                options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+                {
+                    policy.WithOrigins("http://localhost:3000")
+                          .AllowCredentials()
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
+            });
+
+            // Add memory cache (singleton registration is implicit)
             builder.Services.AddMemoryCache();
 
-            builder.Services.AddSingleton<ITokenService, TokenService>();   // Singleton to save the jwt token in memory cache for future connections.
+            // Add configuration access and custom services
+            builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+            builder.Services.AddSingleton<ITokenBlacklistService, TokenBlacklistService>();
+            builder.Services.AddSingleton<ITokenService, TokenService>();
 
+            // Add DbContext
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Scoped service
+            builder.Services.AddScoped<ILoginManager, LoginManager>();
+
+            // Add controllers and swagger
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            // Configure JWT authentication
+            var jwtSettings = builder.Configuration.GetSection("Jwt");
+            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings["Issuer"],
+                    ValidAudience = jwtSettings["Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        // Read token from cookie instead of Authorization header
+                        var token = context.Request.Cookies["jwt"];
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            context.Token = token;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        var jti = context.Principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                        var service = context.HttpContext.RequestServices.GetRequiredService<ITokenBlacklistService>();
+
+                        if (jti != null && service.IsTokenRevoked(jti))
+                        {
+                            context.Fail("Token has been revoked.");
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Middleware pipeline
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -45,8 +114,8 @@ namespace pps_api
 
             app.UseCors(MyAllowSpecificOrigins);
 
+            app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 
