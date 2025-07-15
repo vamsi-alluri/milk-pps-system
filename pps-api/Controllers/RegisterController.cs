@@ -23,7 +23,7 @@ namespace pps_api.Controllers
         {
             try
             {
-                if (Manager.UserRegistration(login_request.Creds))
+                if (Manager.SetUserPassword(login_request.Creds))
                 {
                     return Ok(true);
                 }

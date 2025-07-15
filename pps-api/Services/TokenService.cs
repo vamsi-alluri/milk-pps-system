@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
+using pps_api.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace pps_api.Services
 {
@@ -79,35 +81,30 @@ namespace pps_api.Services
             return true;
         }
 
-        public string GenerateJwtToken(string userId, string role, DateTime expirationDate, IEnumerable<Claim>? old_claims = null)
+        public string GenerateJwtToken(UserAuthInfo userAuthInfo)
         {
-            var new_claims = new List<Claim>
+            var claims = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Name, userId),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique ID for revocation
-                new Claim(ClaimTypes.Role, role)
+                new Claim(JwtRegisteredClaimNames.Name, userAuthInfo.UserId),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim("AccessScopes", JsonSerializer.Serialize(userAuthInfo.AccessScopes))
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var tokenHandler = new JwtSecurityTokenHandler();
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
-                claims: new_claims,
-                expires: expirationDate,
+                claims: claims,
+                expires: userAuthInfo.ExpirationDate,
                 signingCredentials: creds
             );
 
-
-
-
-
-            var token_str = tokenHandler.WriteToken(token);
-            //StoreToken(userId, expirationDate, token_str);
-
-            return token_str;
+            return tokenHandler.WriteToken(token);
         }
+
 
         private string? GetUserIdFromToken(JwtSecurityToken token)
         {
@@ -169,7 +166,7 @@ namespace pps_api.Services
                 throw new UnauthorizedAccessException("Invalid token.");
             }
 
-            if (!VerifyToken(decodedJwtToken))
+            if (decodedJwtToken == null || !VerifyToken(decodedJwtToken))
             {
                 throw new UnauthorizedAccessException("Token verification failed.");
             }
@@ -180,7 +177,14 @@ namespace pps_api.Services
             {
                 throw new ArgumentNullException("UserId cannot be null or empty.");
             }
-            var newToken = GenerateJwtToken(userId, "DefaultRole", expires, decodedJwtToken.Claims);
+            var userAuthInfo = new UserAuthInfo
+            {
+                UserId = userId,
+                AccessScopes = JsonSerializer.Deserialize<List<AccessScope>>(decodedJwtToken.Claims.FirstOrDefault(c => c.Type == "AccessScopes")?.Value ?? string.Empty) ?? new List<AccessScope>(),
+                ExpirationDate = expires
+            };
+
+            var newToken = GenerateJwtToken(userAuthInfo);
             StoreToken(userId, expires, newToken);
             return newToken;
         }

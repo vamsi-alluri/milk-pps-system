@@ -16,7 +16,7 @@ namespace pps_api.Managers
             _dbContext = dbContext;
         }
 
-        private bool AreCredentialsValid(Credentials creds, out Identity? userIdentityData)
+        private bool AreCredentialsValid(Credentials creds, out UserIdentity? userIdentityData)
         {
             userIdentityData = null;
             if (string.IsNullOrEmpty(creds?.Username) || string.IsNullOrEmpty(creds?.Password))
@@ -24,14 +24,14 @@ namespace pps_api.Managers
                 throw new ArgumentNullException("Username and Password are required fields.");
             }
 
-            var user_identity_data = _dbContext.Identity.Where(i => i.Username == creds.Username).FirstOrDefault();
+            var user_identity_data = _dbContext.Identities.Where(i => i.Username == creds.Username).FirstOrDefault();
             if (user_identity_data == null)
             {
                 // User does not exist
                 return false;
             }
 
-            if (!user_identity_data.Active.HasValue || !user_identity_data.Active.Value)
+            if (!user_identity_data.Active)
             {
                 // User is not active
                 // Log the inactive user attempt.
@@ -86,13 +86,20 @@ namespace pps_api.Managers
             }
             else // Disregard jwt_str if creds are provided and issue a new one.
             {
-                if (AreCredentialsValid(creds, out Identity? userIdentityData))
+                if (AreCredentialsValid(creds, out UserIdentity? userIdentityData))
                 {
                     expirationDate = loginRequest.RememberMe
                         ? DateTime.UtcNow.AddDays(7) // Long expiration for remember me
                         : DateTime.UtcNow.AddDays(1); // Short expiration for normal login
 
-                    token_str = _tokenService.GenerateJwtToken(creds.Username, userIdentityData.Role, expirationDate);
+                    var userAuthInfo = new UserAuthInfo
+                    {
+                        UserId = creds.Username,
+                        AccessScopes = userIdentityData.ToAccessScopes(),
+                        ExpirationDate = expirationDate
+                    };
+
+                    token_str = _tokenService.GenerateJwtToken(userAuthInfo);
                     return true;
                 }
                 else
@@ -102,31 +109,71 @@ namespace pps_api.Managers
             }
         }
 
-        public bool UserRegistration(Credentials creds)
+        // TODO: Need to re-implement this method with full user with department and role functionality.
+        //public bool UserRegistration(Credentials creds)
+        //{
+        //    if (creds == null || string.IsNullOrEmpty(creds.Username) || string.IsNullOrEmpty(creds.Password))
+        //    {
+        //        throw new ArgumentNullException("Credentials cannot be null or empty.");
+        //    }
+        //    // Check if the user already exists
+        //    var existingUser = _dbContext.Identity.FirstOrDefault(i => i.Username == creds.Username);
+        //    if (existingUser != null)
+        //    {
+        //        throw new InvalidOperationException("User already exists.");
+        //    }
+
+        //    // Create a new Identity object and save it to the database
+        //    var newIdentity = new Identity(creds)
+        //    {
+        //        Active = true, // Set default active status
+        //        Role = "User", // Set default role
+        //        LastUpdated = DateTime.UtcNow,
+        //        Created = DateTime.UtcNow,
+        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(creds.Password), // Hash the password
+        //        IsPasswordStale = false // Set default password stale status. TODO: If an admin creates a user, set this to true.
+        //    };
+
+        //    _dbContext.Identity.Add(newIdentity);
+        //    _dbContext.SaveChanges();
+
+        //    return true;
+        //}
+
+        public bool SetUserPassword(Credentials creds)
         {
             if (creds == null || string.IsNullOrEmpty(creds.Username) || string.IsNullOrEmpty(creds.Password))
             {
                 throw new ArgumentNullException("Credentials cannot be null or empty.");
             }
             // Check if the user already exists
-            var existingUser = _dbContext.Identity.FirstOrDefault(i => i.Username == creds.Username);
+            var existingUser = _dbContext.Identities.FirstOrDefault(i => i.Username == creds.Username);
             if (existingUser != null)
             {
                 throw new InvalidOperationException("User already exists.");
             }
 
             // Create a new Identity object and save it to the database
-            var newIdentity = new Identity(creds)
+            var newIdentity = new UserIdentity
             {
                 Active = true, // Set default active status
-                Role = "User", // Set default role
+                UserDepartments = new List<UserDepartment> { new UserDepartment 
+                    { 
+                        Department = new Department 
+                        { 
+                            Name = "ANY" // Set default department
+                        },
+                        RoleLevel = 1 // Set default role level
+                    }
+                },
+
                 LastUpdated = DateTime.UtcNow,
                 Created = DateTime.UtcNow,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(creds.Password), // Hash the password
                 IsPasswordStale = false // Set default password stale status. TODO: If an admin creates a user, set this to true.
             };
 
-            _dbContext.Identity.Add(newIdentity);
+            _dbContext.Identities.Add(newIdentity);
             _dbContext.SaveChanges();
 
             return true;

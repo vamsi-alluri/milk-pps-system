@@ -1,0 +1,8 @@
+﻿CREATE TABLE [dbo].[Vendors]
+(
+	Id INT PRIMARY KEY IDENTITY(1,1),
+    Name NVARCHAR(255),
+    Location NVARCHAR(255),
+    Address NVARCHAR(500),
+    OnRoute INT NOT NULL DEFAULT 0
+)
