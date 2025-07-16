@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using pps_api.Managers;
+using pps_api.Authorization;
+using pps_api.Constants;
+using pps_api.Managers.Interfaces;
 using pps_api.Models;
 using pps_api.Services;
 using System.IdentityModel.Tokens.Jwt;
+using pps_api.Enums;
+using static pps_api.Constants.Constants;
 
 namespace pps_api.Controllers
 {
@@ -15,13 +18,15 @@ namespace pps_api.Controllers
     public class LoginController : ControllerBase
     {
 
-        private readonly ILoginManager Manager;
+        private readonly IUserManagementManager Manager;
         private readonly ITokenBlacklistService TokenBlacklistService;
+        private readonly ITokenService TokenService;
 
-        public LoginController(ILoginManager manager, ITokenBlacklistService tokenBlacklistService)
+        public LoginController(IUserManagementManager manager, ITokenBlacklistService tokenBlacklistService, ITokenService tokenService)
         {
             Manager = manager;
             TokenBlacklistService = tokenBlacklistService;
+            TokenService = tokenService;
         }
 
         private string getUserInfoFromJwt(string token_str)
@@ -30,7 +35,7 @@ namespace pps_api.Controllers
             var jwtToken = handler.ReadJwtToken(token_str);
 
             var username = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value ?? "";
-            var accessScopesJson = jwtToken.Claims.FirstOrDefault(c => c.Type == "AccessScopes")?.Value ?? "[]";
+            var accessScopesJson = jwtToken.Claims.FirstOrDefault(c => c.Type == ACCESS_SCOPES_STR)?.Value ?? "[]";
 
             var userInfo = new
             {
@@ -43,19 +48,68 @@ namespace pps_api.Controllers
 
         // POST api/login
         [HttpPost]
-        public IActionResult Post([FromBody] LoginRequest login_request)
+        public IActionResult Post([FromBody] LoginRequest? login_request)
         {
             try
             {
-                if (Manager.AuthenticateUser(login_request, out string? token_str, out DateTime expirationDate) && token_str != null)
+                var username = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value ?? "";
+
+                if (string.IsNullOrEmpty(username) == false && login_request?.Creds == null)
                 {
-                    if (login_request.Jwt != null)
+                    // This will be here if the jwt is valid.
+                    var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                    if (jti != null)
                     {
-                        return Ok(); // If it is a JWT login, just return OK.
+                        if (TokenBlacklistService.IsTokenRevoked(jti))
+                        {
+                            return Unauthorized(new
+                            {
+                                error = "Token has been revoked. Please log in again."
+                            });
+                        }
+                        else
+                        {
+                            // Extract the access scopes from the claim
+                            var accessScopesJson = User.Claims.FirstOrDefault(c => c.Type == ACCESS_SCOPES_STR)?.Value;
+
+                            var userInfo = new
+                            {
+                                username,
+                                accessScopes = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson ?? "") ?? new()
+                            };
+
+                            var userInfoJson = System.Text.Json.JsonSerializer.Serialize(userInfo);
+
+                            HttpContext.Response.Cookies.Append(USERINFO_STR, userInfoJson, new CookieOptions
+                            {
+                                Secure = true,
+                                SameSite = SameSiteMode.Strict,
+                                Expires = DateTimeOffset.UtcNow.AddMinutes(10)
+                            });
+                            return Ok(new
+                            {
+                                message = "Success."
+                            });
+                        }
                     }
-                    else
+                }
+                else
+                {
+                    // Creds provided, if jwt is provided, make sure to revoke it.
+                    var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                    if (jti != null)
                     {
-                        HttpContext.Response.Cookies.Append("jwt", token_str, new CookieOptions
+                        var exp = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
+                        if (exp != null && long.TryParse(exp, out var expUnix))
+                        {
+                            var expTime = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                            TokenBlacklistService.RevokeToken(jti, expTime);
+                        }
+                    }
+
+                    if (Manager.AuthenticateUser(login_request, out string? token_str, out DateTime expirationDate) && token_str != null)
+                    {
+                        HttpContext.Response.Cookies.Append(JWT_STR, token_str, new CookieOptions
                         {
                             HttpOnly = true,
                             Secure = true,
@@ -63,11 +117,11 @@ namespace pps_api.Controllers
                             Expires = expirationDate
                         });
 
-                        HttpContext.Response.Cookies.Append("userInfo", getUserInfoFromJwt(token_str), new CookieOptions
+                        HttpContext.Response.Cookies.Append(USERINFO_STR, getUserInfoFromJwt(token_str), new CookieOptions
                         {
                             Secure = true,
                             SameSite = SameSiteMode.Strict,
-                            Expires = expirationDate
+                            Expires = DateTimeOffset.UtcNow.AddMinutes(10)
                         });
 
                         return Ok();
@@ -76,63 +130,46 @@ namespace pps_api.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (ex) as needed
-                return BadRequest(new { message = ex.Message });
+                return Ok(new
+                {
+                    error = "An error occurred during authentication.",
+                    details = ex.Message
+                });
             }
 
             return Unauthorized();
         }
 
+        // Logout: DELETE api/login
+        [HttpDelete]
         [Authorize]
-        [HttpGet("userinfo")]
-        public IActionResult GetUserInfo()
+        public IActionResult Delete()
         {
-            var username = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value ?? "";
+            var username = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value;
+            var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            var exp = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
 
-            // Extract the access scopes from the claim
-            var accessScopesJson = User.Claims.FirstOrDefault(c => c.Type == "AccessScopes")?.Value;
-
-            // Deserialize the access scopes JSON string into a list of objects
-            List<AccessScope>? accessScopes = null;
-            if (!string.IsNullOrEmpty(accessScopesJson))
+            if (string.IsNullOrEmpty(username) == false && jti != null && long.TryParse(exp, out var expUnix))
             {
-                accessScopes = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson);
+                var expTime = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                TokenBlacklistService.RevokeToken(jti, expTime);
+                TokenService.RemoveRefreshToken(username);
             }
 
-            return Ok(new
-            {
-                username,
-                accessScope = accessScopes ?? new List<AccessScope>()
-            });
+            HttpContext.Response.Cookies.Delete(JWT_STR);
+            HttpContext.Response.Cookies.Delete(USERINFO_STR);
+
+            return Ok(new { message = "Logged out successfully." });
         }
 
-        // This endpoint is for listing all logins, if needed.
+        // Listing all active jwts from memory.
 #if DEBUG
         [HttpGet]
+        [RequireAccessScope(Departments.Admin, Roles.SuperAdmin)]
         public IActionResult ListLogins()
         {
             return Ok(Manager.ListLogins());
         }
 #endif
-
-        // Logout
-        [HttpDelete]
-        [Authorize]
-        public IActionResult Delete()
-        {
-            var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-            var exp = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
-
-            if (jti != null && long.TryParse(exp, out var expUnix))
-            {
-                var expTime = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-                TokenBlacklistService.RevokeToken(jti, expTime);
-            }
-
-            HttpContext.Response.Cookies.Delete("jwt");
-            HttpContext.Response.Cookies.Delete("userInfo");
-
-            return Ok(new { message = "Logged out successfully." });
-        }
     }
 }

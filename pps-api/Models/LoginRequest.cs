@@ -7,9 +7,6 @@ namespace pps_api.Models
         [JsonPropertyName("rememberMe")]
         public bool RememberMe { get; set; }
 
-        [JsonIgnore]
-        public string? Jwt { get; set; }
-
         [JsonPropertyName("credentials")]
         public Credentials? Creds { get; set; }
     }

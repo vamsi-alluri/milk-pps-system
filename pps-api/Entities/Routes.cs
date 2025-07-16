@@ -1,4 +1,6 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class Routes
     {

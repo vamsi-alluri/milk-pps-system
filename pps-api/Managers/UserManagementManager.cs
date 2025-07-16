@@ -1,6 +1,6 @@
-﻿using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using pps_api.Entities;
+using pps_api.Managers.Interfaces;
 using pps_api.Models;
 using pps_api.Services;
 using pps_api.Utils;
@@ -8,17 +8,17 @@ using System.IdentityModel.Tokens.Jwt;
 
 namespace pps_api.Managers
 {
-    public class LoginManager : ILoginManager
+    public class UserManagementManager : IUserManagementManager
     {
         ITokenService _tokenService;
         AppDbContext _dbContext;
-        public LoginManager(ITokenService tokenService, AppDbContext dbContext)
+        public UserManagementManager(ITokenService tokenService, AppDbContext dbContext)
         {
             _tokenService = tokenService;
             _dbContext = dbContext;
         }
 
-        private bool AreCredentialsValid(Credentials creds, out UserIdentity? userIdentityData)
+        public bool AreCredentialsValid(Credentials creds, out UserIdentity? userIdentityData)
         {
             userIdentityData = null;
             if (string.IsNullOrEmpty(creds?.Username) || string.IsNullOrEmpty(creds?.Password))
@@ -53,40 +53,20 @@ namespace pps_api.Managers
 
         public bool AuthenticateUser(LoginRequest loginRequest, out string? token_str, out DateTime expirationDate)
         {
-            var creds = loginRequest.Creds;
-            var jwt_str = loginRequest.Jwt;
+            if (loginRequest == null)
+            {
+                throw new ArgumentNullException("LoginRequest cannot be null.");
+            }
 
-            // Preference creds over jwt.
+            var creds = loginRequest.Creds;
+
             token_str = null;
             expirationDate = DateTime.UtcNow.AddDays(1);
             if (creds == null)
             {
-                if (jwt_str == null)
-                {
-                    // It should never happen, but just in case.
-                    throw new ArgumentNullException("Either Credentials or JWT must be provided.");
-                }
-                else
-                {
-                    if (_tokenService.ValidateToken(jwt_str, out JwtSecurityToken? decodedJwtToken))
-                    {
-                        if (_tokenService.VerifyToken(decodedJwtToken) && _tokenService.VerifyStoredToken(loginRequest?.Creds?.Username, token_str))
-                        {
-                            return true; // Token is valid.
-                        }
-                        else
-                        {
-                            return false; // Token is valid and verification failed.
-                        }
-                    }
-                    else
-                    {
-                        // TODO: Received token is not of JWT type.
-                        return false;
-                    }
-                }
+                throw new ArgumentNullException("Either Credentials or JWT must be provided.");
             }
-            else // Disregard jwt_str if creds are provided and issue a new one.
+            else
             {
                 if (AreCredentialsValid(creds, out UserIdentity? userIdentityData))
                 {
@@ -108,6 +88,26 @@ namespace pps_api.Managers
                 {
                     return false;
                 }
+            }
+        }
+
+        public bool ChangePassword(ChangePassword changePasswordRequest)
+        {
+            var identity = _dbContext.Identities.FirstOrDefault(i => i.Username == changePasswordRequest.Username);
+
+            if (identity != null)
+            {
+                identity.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordRequest.NewPassword);
+
+                identity.IsPasswordStale = false; // Reset stale status after password change
+                identity.LastUpdated = DateTime.UtcNow;
+                _dbContext.Identities.Update(identity);
+                _dbContext.SaveChanges();
+                return true;
+            }
+            else
+            {
+                return false; // User not found
             }
         }
 
@@ -253,7 +253,7 @@ namespace pps_api.Managers
 
         public bool DeleteUserSession(LoginRequest loginRequest)
         {
-            if (loginRequest == null || string.IsNullOrEmpty(loginRequest.Jwt))
+            if (loginRequest == null)
             {
                 throw new ArgumentNullException("JWT is required for user session deletion.");
             }
