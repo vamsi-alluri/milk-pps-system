@@ -9,6 +9,7 @@ namespace pps_api
         public DbSet<Role> Roles { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<UserDepartmentMapping> UserDepartments { get; set; }
+        public DbSet<Vendor> Vendors { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 

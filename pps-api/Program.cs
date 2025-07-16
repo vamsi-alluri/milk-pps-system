@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using pps_api.Authorization;
 using pps_api.Managers;
+using pps_api.Managers.Interfaces;
 using pps_api.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
@@ -42,7 +43,8 @@ namespace pps_api
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Scoped service
-            builder.Services.AddScoped<ILoginManager, LoginManager>(); 
+            builder.Services.AddScoped<IUserManagementManager, UserManagementManager>();
+            builder.Services.AddScoped<IVendorManager, VendorManager>();
 
             // Add controllers and swagger
             builder.Services.AddControllers();

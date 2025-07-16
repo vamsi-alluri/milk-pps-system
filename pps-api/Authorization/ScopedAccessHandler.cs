@@ -6,6 +6,8 @@ namespace pps_api.Authorization
 {
     public class ScopedAccessHandler : AuthorizationHandler<ScopedAccessRequirement>
     {
+
+        const string AnyDepartment = "ANY";
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, ScopedAccessRequirement requirement)
         {
             var claimValue = context.User.FindFirst("AccessScopes")?.Value;
@@ -26,8 +28,11 @@ namespace pps_api.Authorization
                 }
 
                 if (scopes != null && scopes.Any(s =>
-                    string.Equals(s.DepartmentName, requirement.RequiredDepartment, StringComparison.OrdinalIgnoreCase)
-                    && s.RoleLevel >= requirement.MinimumRoleLevel))
+                    (string.Equals(s.DepartmentName, AnyDepartment, StringComparison.OrdinalIgnoreCase) 
+                        || string.Equals(s.DepartmentName, requirement.RequiredDepartment, StringComparison.OrdinalIgnoreCase))
+                    && (s.RoleLevel > 0 
+                        && s.RoleLevel < 6 
+                        && s.RoleLevel >= requirement.MinimumRoleLevel)))
                 {
                     context.Succeed(requirement);
                 }
@@ -35,6 +40,7 @@ namespace pps_api.Authorization
             catch (Exception ex)
             {
                 Console.WriteLine($"Deserialization error: {ex.Message}");
+                throw new JsonException("Failed to deserialize AccessScopes claim.", ex);
             }
 
             return Task.CompletedTask;
