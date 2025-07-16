@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using pps_api.Models;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace pps_api.Services
@@ -8,7 +9,7 @@ namespace pps_api.Services
         public bool ValidateToken(string token, out JwtSecurityToken? decodedJwtToken);
         public bool VerifyToken(JwtSecurityToken? token);
         public bool VerifyStoredToken(string? userId, string? token);
-        public string GenerateJwtToken(string userId, string role, DateTime expirationDate, IEnumerable<Claim>? claims = null);
+        public string GenerateJwtToken(UserAuthInfo userAuthInfo);
         public void RemoveRefreshToken(string userId);
         public string? GetAllRefreshTokens();
         

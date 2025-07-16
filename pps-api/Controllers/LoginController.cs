@@ -6,7 +6,6 @@ using pps_api.Managers;
 using pps_api.Models;
 using pps_api.Services;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace pps_api.Controllers
 {
@@ -23,6 +22,23 @@ namespace pps_api.Controllers
         {
             Manager = manager;
             TokenBlacklistService = tokenBlacklistService;
+        }
+
+        private string getUserInfoFromJwt(string token_str)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token_str);
+
+            var username = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value ?? "";
+            var accessScopesJson = jwtToken.Claims.FirstOrDefault(c => c.Type == "AccessScopes")?.Value ?? "[]";
+
+            var userInfo = new
+            {
+                username,
+                accessScope = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson) ?? new()
+            };
+
+            return System.Text.Json.JsonSerializer.Serialize(userInfo);
         }
 
         // POST api/login
@@ -47,6 +63,13 @@ namespace pps_api.Controllers
                             Expires = expirationDate
                         });
 
+                        HttpContext.Response.Cookies.Append("userInfo", getUserInfoFromJwt(token_str), new CookieOptions
+                        {
+                            Secure = true,
+                            SameSite = SameSiteMode.Strict,
+                            Expires = expirationDate
+                        });
+
                         return Ok();
                     }
                 }
@@ -64,17 +87,22 @@ namespace pps_api.Controllers
         [HttpGet("userinfo")]
         public IActionResult GetUserInfo()
         {
-            var roles = User.Claims
-                .Where(c => c.Type == ClaimTypes.Role)
-                .Select(c => c.Value);
-            var username = User.Claims
-                .Where(c => c.Type == JwtRegisteredClaimNames.Name)
-                .Select(c => c.Value);
+            var username = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Name)?.Value ?? "";
+
+            // Extract the access scopes from the claim
+            var accessScopesJson = User.Claims.FirstOrDefault(c => c.Type == "AccessScopes")?.Value;
+
+            // Deserialize the access scopes JSON string into a list of objects
+            List<AccessScope>? accessScopes = null;
+            if (!string.IsNullOrEmpty(accessScopesJson))
+            {
+                accessScopes = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson);
+            }
 
             return Ok(new
             {
                 username,
-                roles
+                accessScope = accessScopes ?? new List<AccessScope>()
             });
         }
 
@@ -87,9 +115,10 @@ namespace pps_api.Controllers
         }
 #endif
 
-        // Think of this as a logout endpoint.
+        // Logout
         [HttpDelete]
-        public IActionResult Delete(LoginRequest loginRequest)
+        [Authorize]
+        public IActionResult Delete()
         {
             var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
             var exp = User.FindFirst(JwtRegisteredClaimNames.Exp)?.Value;
@@ -100,29 +129,10 @@ namespace pps_api.Controllers
                 TokenBlacklistService.RevokeToken(jti, expTime);
             }
 
+            HttpContext.Response.Cookies.Delete("jwt");
+            HttpContext.Response.Cookies.Delete("userInfo");
+
             return Ok(new { message = "Logged out successfully." });
-
-
-            //try
-            //{
-            //    var jwt = Request.Headers.Authorization.ToString();
-            //    if (!jwt.IsNullOrEmpty() && jwt.StartsWith("Bearer "))
-            //    {
-            //        loginRequest.Jwt = jwt.Substring("Bearer ".Length).Trim();
-            //    }
-            //    Response.Cookies.Delete("refreshToken", new CookieOptions
-            //    {
-            //        HttpOnly = true,
-            //        Secure = true,
-            //        SameSite = SameSiteMode.Strict
-            //    });
-            //    return Ok(Manager.DeleteUserSession(loginRequest));
-            //}
-            //catch (Exception ex)
-            //{
-            //    // Log the exception (ex) as needed
-            //    return BadRequest(new {message = ex.Message });
-            //}
         }
     }
 }

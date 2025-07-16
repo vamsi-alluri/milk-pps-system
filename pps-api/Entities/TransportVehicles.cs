@@ -1,4 +1,6 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class TransportVehicles
     {
@@ -9,8 +11,11 @@
         public string? Source { get; set; }
         public string? Destination { get; set; }
         public string? LastLocation { get; set; }
+        [Precision(18, 2)]
         public decimal? CarryingCapacity { get; set; }
+        [Precision(18, 2)]
         public decimal? VehicleCapacity { get; set; }
+        [Precision(18, 2)]
         public decimal? Cost { get; set; }
         public int? DriverID { get; set; }
         public int? RouteID { get; set; }

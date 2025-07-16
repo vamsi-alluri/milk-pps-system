@@ -1,14 +1,21 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class ProfitabilityReports
     {
         public int? ReportID { get; set; }
         public DateTime ReportDate { get; set; }
         public int DurationID { get; set; }
+        [Precision(18, 2)]
         public decimal TotalSalesRevenue { get; set; }
+        [Precision(18, 2)]
         public decimal TotalProcurementCost { get; set; }
+        [Precision(18, 2)]
         public decimal TotalProcessingCost { get; set; }
+        [Precision(18, 2)]
         public decimal TotalPackagingCost { get; set; }
+        [Precision(18, 2)]
         public decimal TotalTransportationCost { get; set; }
 
         public ProfitabilityReports(int? ReportID_, DateTime ReportDate_, int DurationID_, decimal TotalSalesRevenue_, decimal TotalProcurementCost_, decimal TotalProcessingCost_, decimal TotalPackagingCost_, decimal TotalTransportationCost_)

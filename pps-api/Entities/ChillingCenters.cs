@@ -1,10 +1,13 @@
-﻿public class ChillingCenters
+﻿using Microsoft.EntityFrameworkCore;
+
+public class ChillingCenters
 {
     public int? ChillingCenterID { get; set; }
     public string Name { get; set; }
     public string? Location { get; set; }
     public string? Address { get; set; }
     public string? Capabilities { get; set; }
+    [Precision(18, 2)]
     public decimal? Cost { get; set; }
     public int? OnRoute { get; set; }
 

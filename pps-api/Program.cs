@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using pps_api.Authorization;
 using pps_api.Managers;
 using pps_api.Services;
 using System.IdentityModel.Tokens.Jwt;
@@ -40,7 +42,7 @@ namespace pps_api
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Scoped service
-            builder.Services.AddScoped<ILoginManager, LoginManager>();
+            builder.Services.AddScoped<ILoginManager, LoginManager>(); 
 
             // Add controllers and swagger
             builder.Services.AddControllers();
@@ -48,6 +50,9 @@ namespace pps_api
             builder.Services.AddSwaggerGen();
 
             // Configure JWT authentication
+            builder.Services.AddSingleton<IAuthorizationPolicyProvider, ScopedAccessPolicyProvider>();
+            builder.Services.AddSingleton<IAuthorizationHandler, ScopedAccessHandler>();
+
             var jwtSettings = builder.Configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
@@ -58,8 +63,6 @@ namespace pps_api
             })
             .AddJwtBearer(options =>
             {
-                var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -99,6 +102,8 @@ namespace pps_api
                     }
                 };
             });
+            builder.Services.AddAuthorization();
+
 
 
             var app = builder.Build();

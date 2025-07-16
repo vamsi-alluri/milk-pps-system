@@ -60,3 +60,18 @@ GO
 
 DROP TABLE IF EXISTS Silos;
 GO
+
+DROP TABLE IF EXISTS UserAccessScopes;
+GO
+
+DROP TABLE IF EXISTS UserIdentity;
+GO
+
+DROP TABLE IF EXISTS UserDepartments;
+GO
+
+DROP TABLE IF EXISTS Departments;
+GO
+
+DROP TABLE IF EXISTS Roles;
+GO

@@ -1,10 +1,13 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class MilkMixtureComposition
     {
         public int? CompositionID { get; set; }
         public int? BatchID { get; set; }
         public string? MilkType { get; set; }
+        [Precision(18, 2)]
         public decimal? Percentage { get; set; }
 
         public MilkMixtureComposition(int? CompositionID_, int? BatchID_, string? MilkType_, decimal? Percentage_)

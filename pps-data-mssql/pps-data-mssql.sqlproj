@@ -57,7 +57,9 @@
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="Scripts\" />
-    <Folder Include="dbo\Users" />
+    <Folder Include="dbo\Dummy Data" />
+    <Folder Include="dbo\Database Users" />
+    <Folder Include="dbo\Tables\UserManagement" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\ProcessingPlants.sql" />
@@ -84,10 +86,18 @@
     <Build Include="dbo\Tables\QualityControl.sql" />
     <Build Include="dbo\Tables\TemperatureTracking.sql" />
     <Build Include="dbo\Tables\CurdBatches.sql" />
-    <None Include="Scripts\ScriptsIgnoredOnImport.sql" />
-    <Build Include="dbo\Tables\Identity.sql" />
+    <PreDeploy Include="Scripts\ScriptsIgnoredOnImport.sql" />
+    <Build Include="dbo\Tables\Vendors.sql" />
+    <Build Include="dbo\Tables\VendorSubProducts.sql" />
+    <None Include="dbo\Database Users\Add_pps_api_user.sql" />
+    <Build Include="dbo\Tables\UserManagement\UserIdentity.sql" />
+    <Build Include="dbo\Tables\UserManagement\Roles.sql" />
+    <Build Include="dbo\Tables\UserManagement\Departments.sql" />
+    <Build Include="dbo\Tables\UserManagement\UserDepartments.sql" />
+    <Build Include="dbo\Tables\UserManagement\UserAccessScopes.sql" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="dbo\Users\Add_pps_api_user.sql" />
+    <None Include="dbo\Dummy Data\InsertForUserManagement.sql" />
+    <None Include="pps-data-mssql.publish.xml" />
   </ItemGroup>
 </Project>
