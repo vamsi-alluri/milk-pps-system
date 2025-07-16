@@ -23,7 +23,7 @@ namespace pps_api.Entities
 
         public bool IsPasswordStale { get; set; } = false;
 
-        public ICollection<UserDepartment> UserDepartments { get; set; }
+        public ICollection<UserDepartmentMapping> UserDepartmentMaps { get; set; } = new List<UserDepartmentMapping>();
     }
 
     public class Role
@@ -34,7 +34,7 @@ namespace pps_api.Entities
         [Required, MaxLength(50)]
         public string Name { get; set; }
 
-        public ICollection<UserIdentity> Users { get; set; }
+        public ICollection<UserIdentity>? Users { get; set; }
     }
 
     public class Department
@@ -46,10 +46,10 @@ namespace pps_api.Entities
         [Required, MaxLength(50)]
         public string Name { get; set; }
 
-        public ICollection<UserDepartment> UserDepartments { get; set; }
+        public ICollection<UserDepartmentMapping> UserDepartmentMaps { get; set; } = new List<UserDepartmentMapping>();
     }
 
-    public class UserDepartment
+    public class UserDepartmentMapping
     {
         [Key]
         public int ID { get; set; }

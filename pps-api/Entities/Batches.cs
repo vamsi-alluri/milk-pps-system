@@ -1,4 +1,6 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class Batches
     {
@@ -7,9 +9,12 @@
         public int SiloID { get; set; }
         public string? BatchName { get; set; }
         public string MilkType { get; set; }
+        [Precision(18, 2)]
         public decimal? FatPercentage { get; set; }
         public decimal? SNFPercentage { get; set; }
+        [Precision(18, 2)]
         public decimal? SMPPercentage { get; set; }
+        [Precision(18, 2)]
         public int MilkMixtureComposition { get; set; }
         public DateTime? CreatedAt { get; set; }
         public int StatusID { get; set; }

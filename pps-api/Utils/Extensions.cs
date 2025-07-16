@@ -7,10 +7,10 @@ namespace pps_api.Utils
     {
         public static List<AccessScope> ToAccessScopes(this UserIdentity user)
         {
-            return user.UserDepartments?
+            return user.UserDepartmentMaps?
                 .Select(uas => new AccessScope
                 {
-                    Department = uas?.Department.Name,
+                    DepartmentName = uas?.Department.Name,
                     RoleLevel = uas?.RoleLevel ?? 0
                 }).ToList() ?? new List<AccessScope>();
         }

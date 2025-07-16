@@ -8,7 +8,7 @@ namespace pps_api
         public DbSet<UserIdentity> Identities { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Department> Departments { get; set; }
-        public DbSet<UserDepartment> UserDepartments { get; set; }
+        public DbSet<UserDepartmentMapping> UserDepartments { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -16,18 +16,23 @@ namespace pps_api
         {
             base.OnModelCreating(modelBuilder);
 
-            // UserDepartment: composite key
-            modelBuilder.Entity<UserDepartment>()
-                .HasKey(ud => new { ud.UserIdentityID, ud.DepartmentID });
-
-            modelBuilder.Entity<UserDepartment>()
-                .HasOne(ud => ud.UserIdentity)
-                .WithMany(u => u.UserDepartments)
+            modelBuilder.Entity<UserIdentity>()
+                .HasMany(u => u.UserDepartmentMaps)
+                .WithOne(ud => ud.UserIdentity)
                 .HasForeignKey(ud => ud.UserIdentityID);
 
-            modelBuilder.Entity<UserDepartment>()
+            // UserDepartment: composite key
+            modelBuilder.Entity<UserDepartmentMapping>()
+                .HasKey(ud => new { ud.UserIdentityID, ud.DepartmentID });
+
+            modelBuilder.Entity<UserDepartmentMapping>()
+                .HasOne(ud => ud.UserIdentity)
+                .WithMany(u => u.UserDepartmentMaps)
+                .HasForeignKey(ud => ud.UserIdentityID);
+
+            modelBuilder.Entity<UserDepartmentMapping>()
                 .HasOne(ud => ud.Department)
-                .WithMany(d => d.UserDepartments)
+                .WithMany(d => d.UserDepartmentMaps)
                 .HasForeignKey(ud => ud.DepartmentID);
 
             // Optional: enforce unique Role.Name and Department.Name if not handled by [Index]
@@ -38,6 +43,11 @@ namespace pps_api
             modelBuilder.Entity<Department>()
                 .HasIndex(d => d.Name)
                 .IsUnique();
+
+            modelBuilder.Entity<Department>()
+                .Property(d => d.Name)
+                .UseCollation("SQL_Latin1_General_CP1_CI_AS"); // Case-insensitive collation
+
             modelBuilder.Entity<Vendor>()
             .HasMany(v => v.SubProducts)
             .WithOne(sp => sp.Vendor)

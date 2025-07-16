@@ -1,4 +1,6 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class Inventory
     {
@@ -6,7 +8,9 @@
         public int? ProcessingPlantID { get; set; }
         public int ItemTypeID { get; set; }
         public int? MilkTypeID { get; set; }
+        [Precision(18, 2)]
         public decimal? FatPercentage { get; set; }
+        [Precision(18, 2)]
         public decimal? SNFPercentage { get; set; }
         public int? QuantityLitres { get; set; }
         public int? QuantityKg { get; set; }

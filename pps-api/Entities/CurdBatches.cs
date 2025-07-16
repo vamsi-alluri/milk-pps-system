@@ -1,10 +1,13 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class CurdBatches
     {
         public int? CurdBatchID { get; set; }
         public int? BatchID { get; set; }
         public string? CurdType { get; set; }
+        [Precision(18, 2)]
         public decimal? Quantity { get; set; }
 
         public CurdBatches(int? CurdBatchID_, int? BatchID_, string? CurdType_, decimal? Quantity_)

@@ -1,9 +1,12 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class PackingMaterials
     {
         public int? PackingMaterialID { get; set; }
         public string? PackingMaterialName { get; set; }
+        [Precision(18, 2)]
         public decimal? Cost { get; set; }
         public string? PurposeOfPackingMaterial { get; set; }
 

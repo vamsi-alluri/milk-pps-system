@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using pps_api.Entities;
 using pps_api.Managers;
 using pps_api.Models;
+using pps_api.Authorization;
 
 namespace pps_api.Controllers
 {
@@ -19,11 +22,12 @@ namespace pps_api.Controllers
 
         // POST api/register
         [HttpPost]
-        public IActionResult Post([FromBody] LoginRequest login_request)
+        [RequireAccessScope("ANY", 1)]
+        public IActionResult Post([FromBody] RegisterNewUser newUser)
         {
             try
             {
-                if (Manager.SetUserPassword(login_request.Creds))
+                if (Manager.RegisterNewUser(newUser))
                 {
                     return Ok(true);
                 }

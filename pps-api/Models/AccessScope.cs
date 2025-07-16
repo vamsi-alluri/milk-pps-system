@@ -2,7 +2,7 @@
 {
     public class AccessScope
     {
-        public string? Department { get; set; }
+        public string? DepartmentName { get; set; }
         public int RoleLevel { get; set; } = 0;
     }
 }

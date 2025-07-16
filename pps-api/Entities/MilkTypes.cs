@@ -1,9 +1,12 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class MilkTypes
     {
         public int? MilkID { get; set; }
         public string MilkName { get; set; }
+        [Precision(18, 2)]
         public decimal CostPerLitre { get; set; }
         public string BuffaloOrCow { get; set; }
 

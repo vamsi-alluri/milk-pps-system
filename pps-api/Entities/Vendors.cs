@@ -1,4 +1,6 @@
-﻿namespace pps_api.Entities
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace pps_api.Entities
 {
     public class Vendor
     {
@@ -16,6 +18,7 @@
         public int Id { get; set; }
         public int VendorId { get; set; }
         public string Name { get; set; } = string.Empty;
+        [Precision(18, 2)]
         public decimal? Cost { get; set; }
         public int ProductTypeId { get; set; }
         public Vendor? Vendor { get; set; }
