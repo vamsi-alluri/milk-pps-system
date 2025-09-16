@@ -5,7 +5,7 @@ namespace pps_api.Managers.Interfaces
 {
     public interface IVendorManager
     {
-        public List<Vendor>? GetVendors();
-        public Vendor? GetVendors(int VendorId);
+        public List<Vendor>? GetAllVendors();
+        public Vendor? GetVendorById(int VendorId);
     }
 }

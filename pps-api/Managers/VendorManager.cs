@@ -16,16 +16,28 @@ namespace pps_api.Managers
             _dbContext = dbContext;
         }
 
-        public List<Vendor>? GetVendors()
+        public List<Vendor>? GetAllVendors()
         {
-            return new List<Vendor>();
+            var allVendors = _dbContext.Vendors // Invalid object name vendors.
+                .Include(v => v.Type)
+                .Include(v => v.BankDetails)
+                .Include(v => v.VendorRoutes)
+                    .ThenInclude(vr => vr.Route)
+                .Include(v => v.VendorSubProducts)
+                    .ThenInclude(vsp => vsp.SubProduct)
+                .ToList();
+            return allVendors;
         }
 
-        public Vendor? GetVendors(int VendorId)
+        public Vendor? GetVendorById(int VendorId)
         {
             var vendor = _dbContext.Vendors
-                .Include(v => v.SubProducts)
-                .ThenInclude(sp => sp.ProductType)
+                .Include(v => v.Type)
+                .Include(v => v.BankDetails)
+                .Include(v => v.VendorRoutes)
+                    .ThenInclude(vr => vr.Route)
+                .Include(v => v.VendorSubProducts)
+                    .ThenInclude(vsp => vsp.SubProduct)
                 .FirstOrDefault(v => v.Id == VendorId);
 
             return vendor;

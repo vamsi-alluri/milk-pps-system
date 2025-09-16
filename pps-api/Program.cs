@@ -23,7 +23,16 @@ namespace pps_api
             {
                 options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000")
+
+
+                    //policy.AllowAnyOrigin()
+                    //      .AllowAnyHeader()
+                    //      .AllowAnyMethod();
+                    policy
+                          .WithOrigins(
+                                "http://108.90.113.73:5173",
+                                "http://108.90.113.73:7230"
+                            )
                           .AllowCredentials()
                           .AllowAnyHeader()
                           .AllowAnyMethod();
@@ -116,8 +125,8 @@ namespace pps_api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
-            app.UseHttpsRedirection();
+            
+            //app.UseHttpsRedirection();
 
             app.UseCors(MyAllowSpecificOrigins);
 
@@ -125,6 +134,13 @@ namespace pps_api
             app.UseAuthorization();
 
             app.MapControllers();
+
+            app.Use(async (ctx, next) =>
+            {
+                Console.WriteLine($"Incoming request: {ctx.Request.Method} {ctx.Request.Path}");
+                await next();
+            });
+
 
             app.Run();
         }

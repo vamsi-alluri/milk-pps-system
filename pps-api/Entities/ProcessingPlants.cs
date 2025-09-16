@@ -1,22 +1,28 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
-public class ProcessingPlants
+namespace pps_api.Entities
 {
-    public int? PlantID { get; set; }
-    public string Name { get; set; }
-    public string? Location { get; set; }
-    public string? Address { get; set; }
-    public string? Capabilities { get; set; }
-    [Precision(18, 2)]
-    public decimal? Cost { get; set; }
-
-    public ProcessingPlants(int? PlantID_, string Name_, string? Location_, string? Address_, string? Capabilities_, decimal? Cost_)
+    /// <summary>
+    /// Represents a dairy or processing facility where collected products are processed.
+    /// Includes location, capabilities, and cost parameters for operations.
+    /// </summary>
+    public class ProcessingPlant
     {
-        this.PlantID = PlantID_;
-        this.Name = Name_;
-        this.Location = Location_;
-        this.Address = Address_;
-        this.Capabilities = Capabilities_;
-        this.Cost = Cost_;
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
+        public string? Location { get; set; }
+        public string? Address { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string Capabilities { get; set; } = string.Empty;
+
+        [Precision(18, 2)]
+        public decimal? Cost { get; set; }
     }
 }

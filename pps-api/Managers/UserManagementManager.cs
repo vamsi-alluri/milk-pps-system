@@ -4,7 +4,8 @@ using pps_api.Managers.Interfaces;
 using pps_api.Models;
 using pps_api.Services;
 using pps_api.Utils;
-using System.IdentityModel.Tokens.Jwt;
+using static pps_api.Constants.Constants;
+using pps_api.Enums;
 
 namespace pps_api.Managers
 {
@@ -111,43 +112,12 @@ namespace pps_api.Managers
             }
         }
 
-        // TODO: Need to re-implement this method with full user with department and role functionality.
-        //public bool UserRegistration(Credentials creds)
-        //{
-        //    if (creds == null || string.IsNullOrEmpty(creds.Username) || string.IsNullOrEmpty(creds.Password))
-        //    {
-        //        throw new ArgumentNullException("Credentials cannot be null or empty.");
-        //    }
-        //    // Check if the user already exists
-        //    var existingUser = _dbContext.Identity.FirstOrDefault(i => i.Username == creds.Username);
-        //    if (existingUser != null)
-        //    {
-        //        throw new InvalidOperationException("User already exists.");
-        //    }
-
-        //    // Create a new Identity object and save it to the database
-        //    var newIdentity = new Identity(creds)
-        //    {
-        //        Active = true, // Set default active status
-        //        Role = "User", // Set default role
-        //        LastUpdated = DateTime.UtcNow,
-        //        Created = DateTime.UtcNow,
-        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(creds.Password), // Hash the password
-        //        IsPasswordStale = false // Set default password stale status. TODO: If an admin creates a user, set this to true.
-        //    };
-
-        //    _dbContext.Identity.Add(newIdentity);
-        //    _dbContext.SaveChanges();
-
-        //    return true;
-        //}
-
         private bool IsPasswordValid(string password, out List<string> errors)
         {
             errors = new List<string>();
 
             if (string.IsNullOrWhiteSpace(password)) errors.Add("Password is required.");
-            if (password.Length < 16) errors.Add("Password must be at least 16 characters.");
+            if (password.Length < 12) errors.Add("Password must be at least 12 characters.");
             if (!password.Any(char.IsUpper)) errors.Add("Password must contain at least one uppercase letter.");
             if (!password.Any(char.IsLower)) errors.Add("Password must contain at least one lowercase letter.");
             if (!password.Any(char.IsDigit)) errors.Add("Password must contain at least one number.");
@@ -156,40 +126,39 @@ namespace pps_api.Managers
             return errors.Count == 0;
         }
 
-        public bool RegisterNewUser(RegisterNewUser newUser)
+        private static bool CanCurrentUserCreateDepartment(System.Security.Claims.ClaimsPrincipal user)
         {
-            if (newUser == null 
-                || newUser.Creds == null 
-                ||  string.IsNullOrEmpty(newUser.Creds.Username) 
-                || string.IsNullOrEmpty(newUser.Creds.Password))
+            var accessScopes = user.Claims
+                .Where(c => c.Type == ACCESS_SCOPES_STR)
+                .Select(c => System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(c.Value))
+                .FirstOrDefault();
+
+            if (accessScopes == null || accessScopes.Count == 0)
             {
-                throw new ArgumentNullException("Credentials cannot be null or empty.");
+                return false; // No access scopes available
             }
-            // Check if the user already exists
-            var existingUser = _dbContext.Identities.FirstOrDefault(i => i.Username == newUser.Creds.Username);
-            if (existingUser != null)
+            else
             {
-                throw new InvalidOperationException("User already exists.");
+                foreach (var scope in accessScopes)
+                {
+                    if (scope.RoleLevel >= (int)Roles.Admin) // Assuming role level 5 is for creating departments
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
-            if (IsPasswordValid(newUser.Creds.Password, out List<string> passwordErrors) == false)
-            {
-                throw new ArgumentException(string.Join(", ", passwordErrors));
-            }
+        }
 
-            var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUser.Creds.Password);
-            var password_exists_for_any_user = _dbContext.Identities.FirstOrDefault(i => i.PasswordHash == passwordHash);
-            if (password_exists_for_any_user != null)
-            {
-                throw new InvalidOperationException("Choose a different password.");
-            }
-
+        private List<UserDepartmentMapping> ConvertToUserDepartmentMappings(RegisterNewUser newUser, System.Security.Claims.ClaimsPrincipal user)
+        {
             if (newUser.AccessScopes == null || newUser.AccessScopes.Count == 0)
             {
                 throw new ArgumentException("At least one access scope is required.");
             }
 
-            var userDepartmentMappings = new List<UserDepartmentMapping>();
+            List<UserDepartmentMapping> userDepartmentMappings = new List<UserDepartmentMapping>();
 
             foreach (var accessScope in newUser.AccessScopes)
             {
@@ -214,7 +183,7 @@ namespace pps_api.Managers
 
                 if (department == null)
                 {
-                    if (newUser.AddNewDepartment)
+                    if (newUser.AddNewDepartment && (newUser.isInitialUser || CanCurrentUserCreateDepartment(user)))
                     {
                         department = new Department { Name = accessScope.DepartmentName };
                         _dbContext.Departments.Add(department);
@@ -233,6 +202,67 @@ namespace pps_api.Managers
                 });
             }
 
+            return userDepartmentMappings;
+        }
+
+        /// <summary>
+        /// Adds a new user to the system with the provided credentials and access scopes.
+        /// Creates department if the department does not exist and create-new-department flag is set in the request.
+        /// If CreateNewDepartment is set, the current user must have access to create new departments.
+        /// </summary>
+        /// <param name="newUser"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public bool RegisterNewUser(RegisterNewUser newUser, System.Security.Claims.ClaimsPrincipal user)
+        {
+            if (newUser == null 
+                || newUser.Creds == null 
+                ||  string.IsNullOrEmpty(newUser.Creds.Username) 
+                || string.IsNullOrEmpty(newUser.Creds.Password))
+            {
+                throw new ArgumentNullException("Credentials cannot be null or empty.");
+            }
+
+            var userCount = _dbContext.Identities.Count();
+            if (userCount == 0)
+            {
+                newUser.isInitialUser = true;
+                newUser.AddNewDepartment = true;
+
+                if (newUser.AccessScopes == null || newUser.AccessScopes.Count == 0)
+                {
+                    throw new ArgumentException("At least one access scope is required for the first user.");
+                }
+                if(newUser.AccessScopes.Any(s => int.Parse(s.RoleLevel ?? Roles.InAccessible.ToString()) < (int)Roles.Admin))
+                {
+                    throw new ArgumentException("The first user must have admin access.");
+                }
+            }
+            else
+            {
+                // Check if the user already exists
+                var existingUser = _dbContext.Identities.FirstOrDefault(i => i.Username == newUser.Creds.Username);
+                if (existingUser != null)
+                {
+                    throw new InvalidOperationException("User already exists.");
+                }
+            }
+
+            if (IsPasswordValid(newUser.Creds.Password, out List<string> passwordErrors) == false)
+            {
+                throw new ArgumentException(string.Join(", ", passwordErrors));
+            }
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(newUser.Creds.Password);
+            var password_exists_for_any_user = _dbContext.Identities.FirstOrDefault(i => i.PasswordHash == passwordHash);
+            if (password_exists_for_any_user != null)
+            {
+                throw new InvalidOperationException("Choose a different password.");
+            }
+
+            var userDepartmentMappings = ConvertToUserDepartmentMappings(newUser, user);
 
             // Create a new Identity object and save it to the database
             var newIdentity = new UserIdentity

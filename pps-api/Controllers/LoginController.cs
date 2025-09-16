@@ -12,7 +12,6 @@ using static pps_api.Constants.Constants;
 
 namespace pps_api.Controllers
 {
-    [EnableCors("_myAllowSpecificOrigins")]
     [Route("api/[controller]")]
     [ApiController]
     public class LoginController : ControllerBase
@@ -40,7 +39,7 @@ namespace pps_api.Controllers
             var userInfo = new
             {
                 username,
-                accessScope = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson) ?? new()
+                accessScopes = System.Text.Json.JsonSerializer.Deserialize<List<AccessScope>>(accessScopesJson) ?? new()
             };
 
             return System.Text.Json.JsonSerializer.Serialize(userInfo);

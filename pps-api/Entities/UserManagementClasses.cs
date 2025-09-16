@@ -9,11 +9,11 @@ namespace pps_api.Entities
         [Key]
         public int ID { get; set; }
 
-        [Required, MaxLength(50)]
-        public string Username { get; set; }
+        [Required, MaxLength(50)] // Unique
+        public string Username { get; set; } = string.Empty;
 
         [Required, MaxLength(150)]
-        public string PasswordHash { get; set; }
+        public string PasswordHash { get; set; } = string.Empty;
 
         public bool Active { get; set; }
 
@@ -32,7 +32,7 @@ namespace pps_api.Entities
         public int ID { get; set; }
 
         [Required, MaxLength(50)]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public ICollection<UserIdentity>? Users { get; set; }
     }
@@ -44,7 +44,7 @@ namespace pps_api.Entities
         public int ID { get; set; }
 
         [Required, MaxLength(50)]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public ICollection<UserDepartmentMapping> UserDepartmentMaps { get; set; } = new List<UserDepartmentMapping>();
     }

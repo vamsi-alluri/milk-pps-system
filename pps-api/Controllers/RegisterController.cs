@@ -28,7 +28,7 @@ namespace pps_api.Controllers
         {
             try
             {
-                if (Manager.RegisterNewUser(newUser))
+                if (Manager.RegisterNewUser(newUser, User))
                 {
                     return Ok(true);
                 }

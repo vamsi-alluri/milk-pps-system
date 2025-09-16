@@ -20,6 +20,9 @@ namespace pps_api.Models
         [JsonPropertyName("add-new-department")]
         public bool AddNewDepartment { get; set; } = false;
 
+        [JsonIgnore]
+        public bool isInitialUser { get; set; } = false;
+
     }
 
     [Serializable]

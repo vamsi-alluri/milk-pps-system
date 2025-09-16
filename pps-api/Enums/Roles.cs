@@ -2,6 +2,7 @@
 {
     public enum Roles
     {
+        InAccessible = -1,
         Reader = 0,
         Employee = 1,
         Manager = 2,
